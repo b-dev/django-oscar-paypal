@@ -214,6 +214,10 @@ class SuccessResponseView(PaymentDetailsView):
                   "PayPal transaction"))
             return HttpResponseRedirect(reverse('basket:summary'))
 
+        auto_place_order = getattr(settings, 'PAYPAL_AUTO_PLACE_ORDER', False)
+        if auto_place_order:
+            return self.place_order()
+
         logger.info(
             "Basket #%s - showing preview with payer ID %s and token %s",
             kwargs['basket'].id, self.payer_id, self.token)
@@ -271,6 +275,9 @@ class SuccessResponseView(PaymentDetailsView):
             messages.error(self.request, error_msg)
             return HttpResponseRedirect(reverse('basket:summary'))
 
+        return self.place_order()
+
+    def place_order(self):
         try:
             self.txn = fetch_transaction_details(self.token)
         except PayPalError:
