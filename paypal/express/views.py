@@ -216,7 +216,7 @@ class SuccessResponseView(PaymentDetailsView):
 
         auto_place_order = getattr(settings, 'PAYPAL_AUTO_PLACE_ORDER', False)
         if auto_place_order:
-            return self.place_order(kwargs['basket_id'])
+            return self.auto_place_order(kwargs['basket_id'])
 
         logger.info(
             "Basket #%s - showing preview with payer ID %s and token %s",
@@ -275,9 +275,13 @@ class SuccessResponseView(PaymentDetailsView):
             messages.error(self.request, error_msg)
             return HttpResponseRedirect(reverse('basket:summary'))
 
-        return self.place_order(kwargs['basket_id'])
+        return self.auto_place_order(kwargs['basket_id'])
 
-    def place_order(self, basket_id):
+    def auto_place_order(self, basket_id):
+        error_msg = _(
+            "A problem occurred communicating with PayPal "
+            "- please try again later"
+        )
         try:
             self.txn = fetch_transaction_details(self.token)
         except PayPalError:
@@ -304,6 +308,13 @@ class SuccessResponseView(PaymentDetailsView):
         submission['payment_kwargs']['token'] = self.token
         submission['payment_kwargs']['txn'] = self.txn
         return submission
+
+    def get_success_url(self):
+        success_url = getattr(settings, 'PAYPAL_SUCCESS_URL', False)
+        if success_url:
+            return reverse(success_url)
+
+        return super(SuccessResponseView, self).get_success_url()
 
     def handle_payment(self, order_number, total, **kwargs):
         """
