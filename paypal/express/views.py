@@ -216,7 +216,7 @@ class SuccessResponseView(PaymentDetailsView):
 
         auto_place_order = getattr(settings, 'PAYPAL_AUTO_PLACE_ORDER', False)
         if auto_place_order:
-            return self.place_order()
+            return self.place_order(kwargs['basket_id'])
 
         logger.info(
             "Basket #%s - showing preview with payer ID %s and token %s",
@@ -275,9 +275,9 @@ class SuccessResponseView(PaymentDetailsView):
             messages.error(self.request, error_msg)
             return HttpResponseRedirect(reverse('basket:summary'))
 
-        return self.place_order()
+        return self.place_order(kwargs['basket_id'])
 
-    def place_order(self):
+    def place_order(self, basket_id):
         try:
             self.txn = fetch_transaction_details(self.token)
         except PayPalError:
@@ -286,7 +286,7 @@ class SuccessResponseView(PaymentDetailsView):
             return HttpResponseRedirect(reverse('basket:summary'))
 
         # Reload frozen basket which is specified in the URL
-        basket = self.load_frozen_basket(kwargs['basket_id'])
+        basket = self.load_frozen_basket(basket_id)
         if not basket:
             messages.error(self.request, error_msg)
             return HttpResponseRedirect(reverse('basket:summary'))
